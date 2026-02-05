@@ -44,16 +44,23 @@ pipeline {
                 }
             }
         }
-        stage('3. Build & Push Image') {
+       stage('3. Build & Push Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${env.DOCKER_CRED_ID}", 
-                                                 passwordVariable: 'DOCKER_PASS', 
-                                                 usernameVariable: 'DOCKER_USER')]) {
-                    script {
-                        echo "Building Docker Image..."
-                        sh "docker build -t ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG} ."
-                        sh "echo '${DOCKER_PASS}' | docker login -u '${DOCKER_USER}' --password-stdin"
-                        sh "docker push ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG}"
+                script {
+                    try {
+                        withCredentials([usernamePassword(credentialsId: 'dockerentry', 
+                                                         passwordVariable: 'DOCKER_PASS', 
+                                                         usernameVariable: 'DOCKER_USER')]) {
+                            echo "Found credentials! Building Docker Image..."
+                            sh "docker build -t ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG} ."
+                            sh "echo '${DOCKER_PASS}' | docker login -u '${DOCKER_USER}' --password-stdin"
+                            sh "docker push ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG}"
+                        }
+                    } catch (Exception e) {
+                        echo "WARNING: Could not find 'dockerentry' as a Username/Password credential."
+                        echo "Make sure to create it in Manage Jenkins -> Credentials -> Global."
+                        // Optional: Use 'error' if you want it to fail, or just 'echo' to skip
+                        error "Credential 'dockerentry' missing. Pipeline stopping."
                     }
                 }
             }

@@ -32,11 +32,9 @@ pipeline {
         stage('2. SonarQube Static Analysis') {
             steps {
                 script {
-                    // This grabs the tool we just configured in Step 1
                     def scannerHome = tool 'sonar-scanner'
-                    
-                    // withSonarQubeEnv allows Jenkins to use your sonarqube-token
-                    withSonarQubeEnv(credentialsId: 'sonarqube-token') {
+                    // The name 'SonarQube' here must match the Name in System settings
+                    withSonarQubeEnv('SonarQube') { 
                         sh "${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=Mohith4648_agency-project \
                             -Dsonar.organization=mohith4648 \
@@ -46,7 +44,6 @@ pipeline {
                 }
             }
         }
-
         stage('3. Build & Push Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId: "${env.DOCKER_CRED_ID}", 

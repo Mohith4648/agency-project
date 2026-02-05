@@ -31,19 +31,17 @@ pipeline {
 
         stage('2. SonarQube Static Analysis') {
             steps {
-                withCredentials([string(credentialsId: "${env.SONAR_TOKEN_ID}", variable: 'SONAR_TOKEN')]) {
-                    script {
-                        echo "Running SonarCloud Scan..."
-                        sh """
-                            docker run --rm \
-                            -v ${WORKSPACE}:/usr/src \
-                            -e SONAR_TOKEN=${SONAR_TOKEN} \
-                            -e SONAR_HOST_URL="https://sonarcloud.io" \
-                            sonarsource/sonar-scanner-cli \
-                            -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \
-                            -Dsonar.organization=${env.SONAR_ORG_KEY} \
-                            -Dsonar.sources=.
-                        """
+                script {
+                    // This grabs the tool we just configured in Step 1
+                    def scannerHome = tool 'sonar-scanner'
+                    
+                    // withSonarQubeEnv allows Jenkins to use your sonarqube-token
+                    withSonarQubeEnv(credentialsId: 'sonarqube-token') {
+                        sh "${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=Mohith4648_agency-project \
+                            -Dsonar.organization=mohith4648 \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=https://sonarcloud.io"
                     }
                 }
             }

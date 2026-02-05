@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intern-proj-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: intern-proj
+  template:
+    metadata:
+      labels:
+        app: intern-proj
+    spec:
+      containers:
+      - name: intern-app
+        image: mohith4648/intern-project:v1 # Use your image name here
+        ports:
+        - containerPort: 80

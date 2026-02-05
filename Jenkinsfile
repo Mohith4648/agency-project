@@ -2,37 +2,30 @@ pipeline {
     agent any
 
     environment {
-        // --- CONFIGURATION ---
         GIT_URL = "https://github.com/Mohith4648/agency-project.git"
         IMAGE_NAME = "agency-project"
         TAG = "v1"
-        
-        // --- UPDATED CREDENTIAL IDs ---
         SONAR_TOKEN_ID = "sonarqube-token" 
-        DOCKER_CRED_ID = "mohith4648" // Updated to match your verified ID
+        DOCKER_CRED_ID = "mohith4648" // This ID connects to your Token safely
         K8S_CRED_ID    = "k8s-kubeconfig"
-        
-        // --- SONARQUBE DETAILS ---
-        SONAR_PROJECT_KEY = "Mohith4648_agency-project"
-        SONAR_ORG_KEY     = "mohith4648"
     }
 
     stages {
-        stage('1. Setup & Workspace Cleanup') {
+        stage('1. Setup') {
             steps {
                 cleanWs()
                 git branch: 'main', url: "${env.GIT_URL}"
             }
         }
 
-        stage('2. SonarQube Static Analysis') {
+        stage('2. SonarQube Analysis') {
             steps {
                 script {
                     def scannerHome = tool 'sonar-scanner'
                     withSonarQubeEnv('SonarQube') {
                         sh "${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \
-                            -Dsonar.organization=${env.SONAR_ORG_KEY} \
+                            -Dsonar.projectKey=Mohith4648_agency-project \
+                            -Dsonar.organization=mohith4648 \
                             -Dsonar.sources=. \
                             -Dsonar.host.url=https://sonarcloud.io"
                     }
@@ -42,21 +35,21 @@ pipeline {
 
         stage('3. Build & Push Image') {
             steps {
+                // This block "hides" your token while it works
                 withCredentials([usernamePassword(credentialsId: "${env.DOCKER_CRED_ID}", 
                                                  passwordVariable: 'DOCKER_PASS', 
                                                  usernameVariable: 'DOCKER_USER')]) {
                     script {
-                        echo "Building and Pushing image for: ${DOCKER_USER}"
-                        // Using single quotes for safety
-                        sh 'docker build -t $DOCKER_USER/$IMAGE_NAME:$TAG .'
-                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                        sh 'docker push $DOCKER_USER/$IMAGE_NAME:$TAG'
+                        echo "Logging into Docker Hub as: ${DOCKER_USER}"
+                        sh "docker build -t ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG} ."
+                        sh "echo '${DOCKER_PASS}' | docker login -u '${DOCKER_USER}' --password-stdin"
+                        sh "docker push ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG}"
                     }
                 }
             }
         }
 
-        stage('4. Kubernetes Deployment') {
+        stage('4. Deploy to Kubernetes') {
             steps {
                 withCredentials([file(credentialsId: "${env.K8S_CRED_ID}", variable: 'KUBECONFIG')]) {
                     sh "kubectl --kubeconfig=${KUBECONFIG} apply -f deployment.yaml"

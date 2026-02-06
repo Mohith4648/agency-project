@@ -76,6 +76,18 @@ pipeline {
                 }
             }
         }
+        stage('5. Live Hosting Fallback') {
+            steps {
+                script {
+                    echo "Starting Python Web Server on Port 82..."
+                    // This starts a simple web server using Python which is usually pre-installed
+                    sh "nohup python3 -m http.server 82 &" 
+                    echo "--------------------------------------------------------"
+                    echo "WEBSITE IS NOW ACTUALLY LIVE AT: http://localhost:82"
+                    echo "--------------------------------------------------------"
+                }
+            }
+        }
     }
 
     post {

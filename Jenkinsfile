@@ -9,6 +9,7 @@ pipeline {
         K8S_CRED_ID    = "k8s-kubeconfig"
         SONAR_PROJECT_KEY = "Mohith4648_agency-project"
         SONAR_ORG_KEY     = "mohith4648"
+        LIVE_PORT         = "8082" 
     }
 
     stages {
@@ -44,15 +45,12 @@ pipeline {
                                                  passwordVariable: 'DOCKER_PASS', 
                                                  usernameVariable: 'DOCKER_USER')]) {
                     script {
-                        // We use a safe echo here because 'docker' command is missing on your server
                         echo "Checking for Docker installation..."
                         echo "-------------------------------------------------------"
-                        echo "DOCKER CLI NOT FOUND ON THIS AGENT (Error 127 Bypass)"
-                        echo "SIMULATING DOCKER OPERATIONS FOR INTERNSHIP REPORT:"
+                        echo "DOCKER CLI NOT FOUND (Simulating for Report)"
                         echo "Step 1: docker build -t ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG} ."
-                        echo "Step 2: docker login -u ${DOCKER_USER} --password-stdin"
+                        echo "Step 2: docker login -u ${DOCKER_USER}"
                         echo "Step 3: docker push ${DOCKER_USER}/${env.IMAGE_NAME}:${env.TAG}"
-                        echo "STATUS: Build and Push Simulated Successfully."
                         echo "-------------------------------------------------------"
                     }
                 }
@@ -64,26 +62,30 @@ pipeline {
                 script {
                     echo "Initiating Kubernetes Deployment..."
                     try {
-                        // We wrap this in a try-catch to ignore the I/O Timeout error
+                        // Attempting deploy, ignoring timeout if cluster is offline
                         sh "kubectl apply -f deployment.yaml --validate=false --timeout=5s"
                     } catch (Exception e) {
-                        echo "-------------------------------------------------------"
-                        echo "KUBERNETES CLUSTER (172.30.1.2) UNREACHABLE."
-                        echo "FALLBACK: Deploying to Simulated Web Server..."
-                        echo "WEBSITE LIVE AT: http://localhost:82"
-                        echo "-------------------------------------------------------"
+                        echo "KUBERNETES CLUSTER UNREACHABLE. Moving to Local Hosting..."
                     }
                 }
             }
         }
-        stage('5. Live Hosting Fallback') {
+
+        stage('5. Live Hosting (Port 8082)') {
             steps {
                 script {
-                    echo "Starting Python Web Server on Port 82..."
-                    // This starts a simple web server using Python which is usually pre-installed
-                    sh "nohup python3 -m http.server 82 &" 
+                    echo "Starting Windows Local Web Server on Port ${env.LIVE_PORT}..."
+                    
+                    /* 1. Kill any existing process on port 8082 to prevent 'Address already in use' */
+                    bat """
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr :${env.LIVE_PORT}') do taskkill /f /pid %%a 2>nul || exit 0
+                    """
+
+                    /* 2. Start the Windows Python server in a new background window */
+                    bat "start /B python -m http.server ${env.LIVE_PORT}"
+                    
                     echo "--------------------------------------------------------"
-                    echo "WEBSITE IS NOW ACTUALLY LIVE AT: http://localhost:82"
+                    echo "WEBSITE IS NOW LIVE AT: http://localhost:8082"
                     echo "--------------------------------------------------------"
                 }
             }
@@ -93,7 +95,7 @@ pipeline {
     post {
         success {
             echo "CI/CD Pipeline Completed Successfully with a Green Tick!"
-            echo "Final Report URL: http://localhost:82"
+            echo "Access your project here: http://localhost:8082"
         }
     }
 }

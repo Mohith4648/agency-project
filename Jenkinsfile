@@ -74,15 +74,14 @@ pipeline {
         stage('5. Live Hosting (Port 8082)') {
             steps {
                 script {
-                    echo "Starting Windows Local Web Server on Port ${env.LIVE_PORT}..."
+                    echo "Starting Python Web Server on Port 8082 (Linux/WSL2 Mode)..."
                     
-                    /* 1. Kill any existing process on port 8082 to prevent 'Address already in use' */
-                    bat """
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr :${env.LIVE_PORT}') do taskkill /f /pid %%a 2>nul || exit 0
-                    """
+                    /* 1. Kill any existing process on port 8082 so it doesn't crash */
+                    sh "fuser -k 8082/tcp || true"
 
-                    /* 2. Start the Windows Python server in a new background window */
-                    bat "start /B python -m http.server ${env.LIVE_PORT}"
+                    /* 2. Start the Python server in the background 
+                       Using 'python3' as per standard Linux installs */
+                    sh "nohup python3 -m http.server 8082 > /dev/null 2>&1 &"
                     
                     echo "--------------------------------------------------------"
                     echo "WEBSITE IS NOW LIVE AT: http://localhost:8082"
